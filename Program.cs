@@ -1,38 +1,41 @@
 ﻿using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-class Server
+class Client
 {
     static void Main()
     {
-        int port = 12345;
-        TcpListener listener = new TcpListener(IPAddress.Any, port);
-        listener.Start();
-        Console.WriteLine($"Сервер запущен. Ожидание подключений на порту {port}...");
+        Console.WriteLine("Введите команду (date или time): ");
+        string command = Console.ReadLine()?.Trim().ToLower();
 
-        while (true)
+        if (command != "date" && command != "time")
         {
-            using (TcpClient client = listener.AcceptTcpClient())
+            Console.WriteLine("Некорректная команда.");
+            return;
+        }
+
+        string serverIp = "127.0.0.1";
+        int port = 12345;
+
+        try
+        {
+            using (TcpClient client = new TcpClient(serverIp, port))
             using (NetworkStream stream = client.GetStream())
             {
+                byte[] requestBytes = Encoding.UTF8.GetBytes(command);
+                stream.Write(requestBytes, 0, requestBytes.Length);
+
                 byte[] buffer = new byte[256];
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                string response = Encoding.UTF8.GetString(buffer, 0, bytesRead);
 
-                string response = request.ToLower() switch
-                {
-                    "date" => DateTime.Now.ToShortDateString(),
-                    "time" => DateTime.Now.ToLongTimeString(),
-                    _ => "Неверный запрос"
-                };
-
-                byte[] responseBytes = Encoding.UTF8.GetBytes(response);
-                stream.Write(responseBytes, 0, responseBytes.Length);
-
-                Console.WriteLine($"Запрос: {request}, Ответ: {response}");
+                Console.WriteLine($"Ответ от сервера: {response}");
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка: {ex.Message}");
         }
     }
 }
